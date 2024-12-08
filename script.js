@@ -3,63 +3,108 @@ let result = document.querySelector("pre");
 let results; // Define results at a higher scope
 
 document.addEventListener("DOMContentLoaded", () => {
-  findMyCoordinate();
+  getUserCountry();
 });
+// http.onreadystatechange = function () {
+//   console.log("HTTP state change:", this.readyState, this.status);
+//   if (this.readyState == 4) {
+//     if (this.status == 200) {
+//       console.log("API response:", this.responseText);
+//       results = JSON.parse(this.responseText);
+//       console.log("Parsed results:", results);
+//       if (results.city && results.countryName) {
+//         salah();
+//       } else {
+//         console.error("City or Country Name missing in results:", results);
+//         alert("City or Country Name is missing from the API response.");
+//       }
+//     } else {
+//       console.error("API request failed with status:", this.status);
+//       alert("Failed to fetch data from the API.");
+//     }
+//   }
+// };
 
-function findMyCoordinate() {
-  if (navigator.geolocation) {
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const bdcAPI = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${position.coords.latitude}&longitude=${position.coords.longitude}`;
-        getAPI(bdcAPI);
-      },
-      (err) => {
-        alert(err.message);
-      }
-    );
-  } else {
-    alert("Geolocation is not supported");
-  }
+// function findMyCoordinate() {
+//   if (navigator.geolocation) {
+//     navigator.geolocation.getCurrentPosition(
+//       (position) => {
+//         console.log("Coordinates retrieved:", position.coords);
+//         const bdcAPI = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${position.coords.latitude}&longitude=${position.coords.longitude}`;
+//         getAPI(bdcAPI);
+//       },
+//       (err) => {
+//         handleGeolocationError(err);
+//       }
+//     );
+//   } else {
+//     alert("Geolocation is not supported by your browser.");
+//   }
+// }
+
+// function handleGeolocationError(err) {
+//   switch (err.code) {
+//     case 1: // PERMISSION_DENIED
+//       alert("Permission denied. Please allow location access.");
+//       break;
+//     case 2: // POSITION_UNAVAILABLE
+//       alert("Position unavailable. Please check your location settings.");
+//       break;
+//     case 3: // TIMEOUT
+//       alert("Request timed out. Please try again.");
+//       break;
+//     default:
+//       alert("An unknown error occurred.");
+//   }
+//   console.error("Geolocation error:", err);
+// }
+
+// function getAPI(bdcAPI) {
+//   http.open("GET", bdcAPI);
+//   http.send();
+//   http.onreadystatechange = function () {
+//     if (this.readyState == 4 && this.status == 200) {
+//       results = JSON.parse(this.responseText);
+//       console.log("Results from bigdatacloud:", results);
+
+//       if (results.city && results.countryName) {
+//         salah();
+//       } else {
+//         alert("City or Country Name is missing from the API response.");
+//         console.error("City or Country Name missing in results:", results);
+//       }
+//     }
+//   };
+// }
+
+function getUserCountry() {
+  const ipAPI = "https://ipinfo.io?token=23e5f53cc2b967"; // Replace with your token
+
+  fetch(ipAPI)
+    .then((response) => response.json())
+    .then((data) => {
+      console.log(data);
+      const countryName = data.country; // ISO 3166-1 alpha-2 code (e.g., "US", "FR")
+      const city = data.city;
+      console.log(`Country: ${countryName}, City: ${city}`);
+
+      // Use the country or city in the Adhan API
+      salah(city, countryName);
+    })
+    .catch((err) => {
+      console.error("Error fetching IP-based location:", err);
+      alert("Could not determine location.");
+    });
 }
-
-function getAPI(bdcAPI) {
-  http.open("GET", bdcAPI);
-  http.send();
-  http.onreadystatechange = function () {
-    if (this.readyState == 4 && this.status == 200) {
-      //result.innerHTML = this.responseText;
-      results = JSON.parse(this.responseText); // Assign results at this point
-      console.log(results.city);
-
-      // Check if results is defined before calling salah
-      if (results) {
-        salah();
-      } else {
-        console.log("Results not available yet.");
-      }
-    }
-  };
-}
-
-function salah() {
-  if (!results) {
+function salah(city, countryName) {
+  if (!city || !countryName) {
     return;
   }
 
   var year = new Date().getFullYear();
   var month = new Date().getMonth() + 1;
-  var day = new Date().getDate() - 1;
-  fetch(
-    "https://api.aladhan.com/v1/calendarByCity/" +
-      year +
-      "/" +
-      month +
-      "?city=" +
-      results.city +
-      "&country=" +
-      results.countryName +
-      "&method=3"
-  )
+  var day = Math.max(0, new Date().getDate() - 1);
+  fetch("https://api.aladhan.com/v1/calendarByCity/" + year + "/" + month + "?city=" + city + "&country=" + countryName + "&method=3")
     .then((Response) => Response.json())
     .then((data) => {
       var time = data;
@@ -82,11 +127,13 @@ function salah() {
       maghb.innerHTML = Maghib.replace("(+01)", "");
       var ish = document.getElementById("isha");
       ish.innerHTML = Isha.replace("(+01)", "");
-      document.querySelector(".hhh").innerHTML = results.city;
-      document.querySelector(".method").innerHTML =
-        "<i>method :  </i>" + method;
-      document.querySelector(".date").innerHTML =
-        "Miladi :" + gregorian + " | " + "hijri :" + hijri;
+      document.querySelector(".hhh").innerHTML = city;
+      document.querySelector(".method").innerHTML = "<i>method :  </i>" + method;
+      document.querySelector(".date").innerHTML = "Miladi :" + gregorian + " | " + "hijri :" + hijri;
+    })
+    .catch((error) => {
+      console.error("Error fetching salah timings:", error);
+      alert("Failed to fetch salah timings.");
     });
 }
 

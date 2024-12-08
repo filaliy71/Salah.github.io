@@ -1,9 +1,8 @@
-const http = new XMLHttpRequest();
+// const http = new XMLHttpRequest();
 let result = document.querySelector("pre");
-let results; // Define results at a higher scope
 
 document.addEventListener("DOMContentLoaded", () => {
-  getUserCountry();
+  salah();
 });
 // http.onreadystatechange = function () {
 //   console.log("HTTP state change:", this.readyState, this.status);
@@ -76,30 +75,43 @@ document.addEventListener("DOMContentLoaded", () => {
 //     }
 //   };
 // }
-
-function getUserCountry() {
+async function getUserCountry() {
   const ipAPI = "https://ipinfo.io?token=23e5f53cc2b967"; // Replace with your token
 
-  fetch(ipAPI)
-    .then((response) => response.json())
-    .then((data) => {
-      console.log(data);
-      const countryName = data.country; // ISO 3166-1 alpha-2 code (e.g., "US", "FR")
-      const city = data.city;
-      console.log(`Country: ${countryName}, City: ${city}`);
-
-      // Use the country or city in the Adhan API
-      salah(city, countryName);
-    })
-    .catch((err) => {
-      console.error("Error fetching IP-based location:", err);
-      alert("Could not determine location.");
-    });
-}
-function salah(city, countryName) {
-  if (!city || !countryName) {
-    return;
+  try {
+    const response = await fetch(ipAPI);
+    if (!response.ok) {
+      throw new Error("Network response was not ok");
+    }
+    const data = await response.json();
+    console.log(data);
+    return data; // Return the fetched data
+  } catch (err) {
+    console.error("Error fetching IP-based location:", err);
+    alert("Could not determine location.");
+    return null;
   }
+}
+async function salah() {
+  let city = localStorage.getItem("city");
+  let countryName = localStorage.getItem("countryName");
+
+  if (!city || !countryName) {
+    const locationData = await getUserCountry();
+    if (locationData) {
+      city = locationData.city;
+      countryName = locationData.country;
+
+      // Save to localStorage for future use
+      localStorage.setItem("city", city);
+      localStorage.setItem("countryName", countryName);
+    } else {
+      alert("Unable to determine location. Please try again later.");
+      return;
+    }
+  }
+
+  // Fetch user location if not in localStorage
 
   var year = new Date().getFullYear();
   var month = new Date().getMonth() + 1;
